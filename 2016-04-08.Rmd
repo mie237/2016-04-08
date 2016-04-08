@@ -1,0 +1,256 @@
+---
+title: 'MIE237'
+author: "Neil Montgomery"
+date: "2016-04-08"
+output: 
+  ioslides_presentation: 
+    css: 'styles.css' 
+    widescreen: true 
+    transition: 0.001
+---
+\newcommand{\Var}[1]{\text{Var}\left( #1 \right)}
+\newcommand{\E}[1]{E\left( #1 \right)}
+\newcommand{\Sample}[1]{#1_1,\ldots,#1_n}
+\newcommand{\od}[2]{\overline #1_{#2\cdot}}
+\newcommand{\flist}[2]{\{#1_1, #1_2, \ldots, #1_#2\}}
+\newcommand{\samp}[2]{#1_1, #1_2, \ldots, #1_#2}
+\renewcommand{\bar}[1]{\overline{#1}}
+\newcommand{\ve}{\varepsilon}
+\newcommand{\bs}[1]{\boldsymbol{#1}}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache=TRUE)
+```
+
+# the analysis of designed experiments
+
+## Formal definitions: factor, level { .build }
+
+A *factor* is a controllable experimental condition.
+
+A factor can take on two or more *levels*. 
+
+E.g., in a study of haul trucks "oil brand" could be a factor, with levels "Castrol", "Volvo", "Komatsu". 
+
+When experimental units are randomly assigned to levels of a factor and some output measure is observed, this is called a *designed experiment*. The formal model is typically written as (more on this later):
+$$ Y_{ij} = \mu_i + \ve_{ij}$$
+
+We've seen the case of $i \in \{1, 2\}$---such an experiment would be analyzed using a two-sample $t$ procedure.
+
+In reality any dataset with one categorical "input" variable and one numerical "output" variable will be analysed the same as a formally designed experiment.
+
+## Typical dataset...
+
+```{r}
+library(knitr)
+set.seed(1)
+oil <- data.frame("Truck ID" = replicate(12, paste("HT", sample(0:999, 1, replace = TRUE))), 
+                  "Oil" = rep(c("Volvo", "Castrol", "Komatsu"), 4),
+                  "Viscosity" = round(rnorm(12, 25, 1), 1))
+kable(oil)
+```
+
+## One factor notation, models
+
+"Balanced" case with equal sample size $n$ for each of $k$ levels for $N = nk$ total.
+
+Levels:    |  1  |  2  | ... |  i  | ... |  k  |
+:---------|:---:|:---:|:---:|:---:|:---:|:---:|
+&nbsp;    | $y_{11}$ | $y_{21}$ | ... | $y_{i1}$ | ... | $y_{k1}$ |
+&nbsp;    | $y_{12}$ | $y_{22}$ | ... | $y_{i2}$ | ... | $y_{k2}$ |
+&nbsp;    | $\vdots$ | $\vdots$ | &nbsp; | $\vdots$ |&nbsp; | $\vdots$  |
+&nbsp;    | $y_{1n}$ | $y_{2n}$ | ... | $y_{in}$ | ... | $y_{kn}$ |
+Sample average: | $\bar y_{1\cdot}$ | $\bar y_{2\cdot}$ | ... | $\bar y_{i\cdot}$ | ... | $\bar y_{k\cdot}$ |
+
+Grand overall average: $\bar y_{\cdot\cdot}$
+
+Models:
+$$y_{ij} = \mu_i + \ve_{ij}, \qquad \ve_{ij} \text{ i.i.d. } N(0, \sigma^2)$$
+$$y_{ij}= \mu + \alpha_i + \ve_{ij}, \qquad \sum \alpha_i = 0 \qquad \ve_{ij} \text{ i.i.d. } N(0, \sigma^2)$$
+
+## The main question { .build }
+
+The main question is $H_0: \mu_1 = \mu_2 = \cdots = \mu_k = 0$ versus the negation (equivalently: all the $\alpha_i = 0$.) 
+
+In other words "is the variation among all the $y_{ij}$ due to the factor variable, or just due to random chance?". The analysis even follows this logic. 
+
+The variation among the $y_{ij}$ is quantified as (as usual?):
+
+$$(N-1)\cdot s^2_y = \sum_{i=1}^k\sum_{j=1}^n \left(y_{ij} - \bar y_{\cdot\cdot}\right)^2$$
+
+We will split this up into the "factor" part and the "random chance" part (like done in regression).
+
+## "Analysis of Variance" - I { .build }
+
+Build up from the inside out. For any $i$ and $j$ fixed:
+$$\begin{align}\left(y_{ij} - \bar y_{\cdot\cdot}\right)^2 &= 
+\left(y_{ij} - \bar y_{i\cdot} + \bar y_{i\cdot} - \bar y_{\cdot\cdot}\right)^2\\
+&=\left(y_{ij} - \bar y_{i\cdot}\right)^2 + \left(\bar y_{i\cdot} - \bar y_{\cdot\cdot}\right)^2 +
+2\left(y_{ij} - \bar y_{i\cdot}\right)\left(\bar y_{i\cdot} - \bar y_{\cdot\cdot}\right)
+\end{align}$$
+
+Next, sum from $j=1$ to $n$ to get:
+$$\sum_{j=1}^n \left(y_{ij} - \bar y_{\cdot\cdot}\right)^2 
+=\sum_{j=1}^n\left(y_{ij} - \bar y_{i\cdot}\right)^2 + \sum_{j=1}^n\left(\bar y_{i\cdot} - \bar y_{\cdot\cdot}\right)^2 +
+2\left(\bar y_{i\cdot} - \bar y_{\cdot\cdot}\right)\sum_{j=1}^n\left(y_{ij} - \bar y_{i\cdot}\right)$$
+
+Finally, sum from $i=1$ to $k$ and rearrange:
+$$\sum_{i=1}^k\sum_{j=1}^n \left(y_{ij} - \bar y_{\cdot\cdot}\right)^2 
+= \sum_{i=1}^kn\left(\bar y_{i\cdot} - \bar y_{\cdot\cdot}\right)^2 +  + \sum_{i=1}^k\sum_{j=1}^n\left(y_{ij} - \bar y_{i\cdot}\right)^2 $$
+
+## (Note: unbalanced case)
+
+Simply replace $n$ with $n_i$ (sample size for level $i$)
+
+## "Analysis of Variance" - II { .build }
+
+Similar to the regression case:
+$$\begin{align}\sum_{i=1}^k\sum_{j=1}^n \left(y_{ij} - \bar y_{\cdot\cdot}\right)^2 
+&= \sum_{i=1}^kn\left(\bar y_{i\cdot} - \bar y_{\cdot\cdot}\right)^2 +  + \sum_{i=1}^k\sum_{j=1}^n\left(y_{ij} - \bar y_{i\cdot}\right)^2\\
+SST \qquad &= \qquad SSA \qquad + \qquad SSE\\
+\chi^2_{nk-1} \qquad &= \qquad \chi^2_{k-1} \qquad + \qquad \chi^2_{k(n-1)}\end{align}$$
+
+Note that $nk-1 = k - 1 + k(n-1)$, as expected.
+
+Call:
+$$MSA = \frac{SSA}{k-1} \qquad \text{ and } \qquad MSE = \frac{SSE}{k(n-1)}$$
+
+## "Analysis of Variance" - III
+
+The analysis is based on:
+$$F = \frac{MSA}{MSE} \sim F_{k-1, k(n-1)}$$
+
+For example, consider exercise 13.1 "tensile strength of rubber seals". $k=6$ machines are compared and $n=4$ seals taken from each machine.
+
+```{r, fig.height=3, fig.align='center', message=FALSE}
+library(ggplot2)
+library(rio)
+library(dplyr)
+seals <- import("Ex13.01.txt")
+seals %>% 
+  ggplot(aes(factor(Machine),`Tensile-Strength`)) + geom_boxplot()
+```
+
+## ex 13.1 analysis
+
+```{r, echo=TRUE}
+summary(aov(`Tensile-Strength` ~ factor(Machine), seals))
+```
+
+## Exercise 13.2
+
+"Hours of relief for people with fevers". $k=5$ tablets with $n=5$ subjects each.
+
+```{r, fig.height=3, fig.align='center'}
+tablets <- import("Ex13.02.txt")
+tablets%>% 
+  ggplot(aes(factor(Tablet),`Hours-relief`)) + geom_boxplot()
+tablets %>% 
+  aov(`Hours-relief` ~ factor(Tablet), data = .) %>% 
+  summary
+```
+
+## Relationship with other analyses
+
+When $k=2$ the usual analysis is done with a two-sample $t$ test. The p-value obtained using the $F$ approach will be *identical* to the one using the $t$ test (equal variance assumption version).
+
+The analyis is *identical* (mathematically) to the multiple regression with the factor variable coded into the required number of dummy variables. 
+
+Sadly the book chooses (which I have followed) to use $k$ as the number of variables in a regression model as well as the number of levels for a factor. Of course, $k$ levels translates into $k-1$ dummy variables.
+
+## Model assumptions { .build }
+
+The model assumptions are the same as for the two-sample $t$ test: equal variances, normal errors.
+
+The way to assess the model assumptions is similar, but adjusted for $k$ levels rather than just 2.
+
+For normality, use a normal quantile plot of the "residuals" $y_{ij} - \bar y_{i\cdot}$.
+
+There is no good formal statistical test for equal variances. We'll use this heuristic. Calculate:
+$$\frac{\max_i s^2_i}{\min_i s^2_i}$$
+
+## ANOVA equal variance assumption heuristic
+
+Compare with:
+
+* 9, when the residuals are normal *and* the experiment is balanced
+
+* 4, when the residuals are non-normal *or* the experiment is (severely) unbalanced (but not both)
+
+* 3, when the residuals are non-normal *and* the experiment is (severely) unbalanced
+
+## Rubber seals assumptions check
+
+```{r, fig.height=3}
+library(knitr)
+seals %>% 
+  aov(`Tensile-Strength` ~ factor(Machine), data=.) %>% 
+  residuals %>% data.frame(sample=.) %>% 
+  ggplot(aes(sample=sample)) + stat_qq()
+seals %>% 
+  group_by(Machine) %>% 
+  summarize(Variance=var(`Tensile-Strength`))
+```
+
+## Multiple comparisons { .build }
+
+The basic analysis does not give information about the most common follow-up question: which pairs of groups are different?
+
+Naive approach: perform the $k(k-1)/2$ two-sample $t$ tests of the pairs that interest us.
+
+Problems: Type I error, and bias.
+
+Solution: perform *all* pairwise comparisons, holding them to a standard that controls for an overall "experiment-wise" error rate.
+
+## Tukey's procedure { .build }
+
+Works for balanced experiments: $n_i = n$ for all $i$
+
+Rather than comparing 
+$$\frac{\bar y_{i\cdot} - \bar y_{j\cdot}}{\sqrt{2\cdot MSE/n}}$$
+with a $t$ distribution, we'll compare it with a special purpose (wider) distribution
+called the "studentized range distribution", which is the distribution of:
+
+$$\frac{\max_i \bar y_{i\cdot} - \min_j \bar y_{j\cdot}}{\sqrt{MSE/n}}$$
+
+Distribution parameters: $k$ and $\nu = k(n-1)$
+
+## Tukey's procedure algorithm { .build }
+
+This is classical hypothesis testing: fix $\alpha$
+
+Perform the overall $F$ test. If "accept", **stop**.
+
+Find the $\alpha$ upper-tail probability point $q[\alpha,k,\nu]$ from the table.
+
+Multiply it by $\sqrt{MSE/n}$ to get the comparison threshold ("critical value")
+
+Rank the $y_{i\cdot}$ (low to high) and compare.
+
+## Example: rubber seals
+
+Done.
+
+## Example: tablets
+
+$\alpha = 0.05$
+
+$q(0.05, 5, 20) = 4.24$
+
+
+
+```{r}
+tablets %>% 
+  group_by(Tablet) %>% 
+  summarize(Mean=mean(`Hours-relief`)) %>% arrange(Mean) %>% kable
+summary(aov(`Hours-relief` ~ factor(Tablet), data=tablets))
+```
+
+Critical value: $\sqrt{\frac{2.977}{5}} = `r 4.24*sqrt(2.977/5)`$
+
+
+
+
+
+
+
